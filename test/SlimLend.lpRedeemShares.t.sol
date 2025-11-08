@@ -208,7 +208,7 @@ contract SlimLendTest is Test {
         
         // Should fail due to insufficient liquidity
         vm.prank(user);
-        vm.expectRevert("insufficient liquidity");
+        vm.expectRevert(SlimLend.InsufficientLiquidity.selector);
         c.lpRedeemShares(shareAmount, shareAmount);
     }
 
