@@ -405,9 +405,8 @@ contract SlimLend is ERC20("LPSlimShares", "LPS") {
      * @param borrower The address of the borrower to liquidate
      */
     function liquidate(address borrower) public {
-        _updateSharePrices();
-
         console.log("collateral_ratio:", collateralization_ratio(borrower));
+        _updateSharePrices(); // TODO: Wasn't checked in the tests (add a counter-test)
         if (canLiquidate(borrower)) {
             BorrowerInfo storage b = borrowerInfo[borrower];
             uint256 amountNeeded = Math.mulDiv(
