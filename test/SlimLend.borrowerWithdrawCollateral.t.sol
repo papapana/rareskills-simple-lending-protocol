@@ -7,7 +7,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract MockERC20 is ERC20 {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
-    
+
     function mint(address to, uint256 amount) external {
         _mint(to, amount);
     }
@@ -16,24 +16,24 @@ contract MockERC20 is ERC20 {
 contract MockPriceFeed is IPriceFeed {
     uint8 public decimals;
     int256 public price;
-    
+
     constructor(uint8 _decimals, int256 _price) {
         decimals = _decimals;
         price = _price;
     }
-    
+
     function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
         return (1, price, block.timestamp, block.timestamp, 1);
     }
-    
+
     function description() external pure returns (string memory) {
         return "Mock Price Feed";
     }
-    
+
     function version() external pure returns (uint256) {
         return 1;
     }
-    
+
     function setPrice(int256 _price) external {
         price = _price;
     }
@@ -47,7 +47,7 @@ contract SlimLendTest is Test {
 
     bytes32 constant BORROWER_SHARE_PRICE_SLOT = bytes32(uint256(8));
     bytes32 constant BORROWER_INFO_SLOT = bytes32(uint256(10));
-    
+
     uint256 constant MIN_COLLATERALIZATION_RATIO = 1.5e18;
 
     function setUp() public {
@@ -252,7 +252,7 @@ contract SlimLendTest is Test {
 
         // Initial ratio: 160% > 150% ✅ (would pass if checked before withdrawal)
         // Final ratio: 140% < 150% ❌ (correctly fails when checked after withdrawal)
-        
+
         uint256 initialRatio = c.collateralization_ratio(user);
         assertEq(initialRatio, 1.6e18, "Should start at 160%");
         assertGe(initialRatio, MIN_COLLATERALIZATION_RATIO, "Initial ratio should be valid");
@@ -280,7 +280,7 @@ contract SlimLendTest is Test {
         _setBorrowerShares(user, 0); // No debt
         _setBorrowerSharePrice(1e18);
         priceFeed.setPrice(1e8);
-        
+
         // Intentionally NOT giving contract enough collateral
         collateralToken.mint(address(c), withdrawAmount - 1); // 1 wei short
 
@@ -314,7 +314,7 @@ contract SlimLendTest is Test {
 
         // Initial: $300/$200 = 150% (exactly at minimum)
         // After withdrawal: $250/$200 = 125% < 150% (should fail)
-        
+
         uint256 initialRatio = c.collateralization_ratio(user);
         assertEq(initialRatio, 1.5e18, "Should start at exactly 150%");
 
@@ -338,7 +338,7 @@ contract SlimLendTest is Test {
 
         // Initial: $300/$100 = 300%
         // After withdrawal: (150-25) * $2 = $250/$100 = 250% (still above 150%)
-        
+
         vm.prank(user);
         c.borrowerWithdrawCollateral(withdrawTokens); // Should succeed
 
@@ -502,9 +502,9 @@ contract SlimLendTest is Test {
         _setBorrowerShares(user, 0); // No debt
         _setBorrowerSharePrice(1e18);
         priceFeed.setPrice(1e8);
-        
+
         // Intentionally NOT giving contract any collateral tokens
-        
+
         vm.prank(user);
         vm.expectRevert(); // Should fail on token transfer
         c.borrowerWithdrawCollateral(withdrawAmount);

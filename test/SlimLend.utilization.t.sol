@@ -12,20 +12,20 @@ contract MockERC20 is ERC20 {
 contract MockPriceFeed is IPriceFeed {
     uint8 public decimals;
     int256 public price;
-    
+
     constructor(uint8 _decimals, int256 _price) {
         decimals = _decimals;
         price = _price;
     }
-    
+
     function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
         return (1, price, block.timestamp, block.timestamp, 1);
     }
-    
+
     function description() external pure returns (string memory) {
         return "Mock Price Feed";
     }
-    
+
     function version() external pure returns (uint256) {
         return 1;
     }
@@ -36,7 +36,7 @@ contract SlimLendTest is Test {
     MockERC20 public assetToken;
     MockERC20 public collateralToken;
     MockPriceFeed public priceFeed;
-    
+
     function setUp() public {
         assetToken = new MockERC20("Asset Token", "ASSET");
         collateralToken = new MockERC20("Collateral Token", "COLL");
@@ -63,9 +63,9 @@ contract SlimLendTest is Test {
 
         vm.store(address(c), TOTAL_DEPOSITED_TOKENS_SLOT, bytes32(uint256(amount)));
         vm.store(address(c), TOTAL_BORROWED_TOKENS_SLOT, bytes32(uint256(amount / 2)));
- 
+
         uint256 u = c.utilization();
-        assertEq(u, 0.5e18, "utilization should be 50%");        
+        assertEq(u, 0.5e18, "utilization should be 50%");
     }
 
     function test_100pct_utilization() public {
@@ -73,8 +73,8 @@ contract SlimLendTest is Test {
 
         vm.store(address(c), TOTAL_DEPOSITED_TOKENS_SLOT, bytes32(uint256(amount)));
         vm.store(address(c), TOTAL_BORROWED_TOKENS_SLOT, bytes32(uint256(amount)));
- 
+
         uint256 u = c.utilization();
-        assertEq(u, 1e18, "utilization should be 100%");        
+        assertEq(u, 1e18, "utilization should be 100%");
     }
 }

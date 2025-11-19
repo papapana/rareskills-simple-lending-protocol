@@ -12,20 +12,20 @@ contract MockERC20 is ERC20 {
 contract MockPriceFeed is IPriceFeed {
     uint8 public decimals;
     int256 public price;
-    
+
     constructor(uint8 _decimals, int256 _price) {
         decimals = _decimals;
         price = _price;
     }
-    
+
     function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
         return (1, price, block.timestamp, block.timestamp, 1);
     }
-    
+
     function description() external pure returns (string memory) {
         return "Mock Price Feed";
     }
-    
+
     function version() external pure returns (uint256) {
         return 1;
     }
@@ -36,7 +36,7 @@ contract SlimLendTest is Test {
     MockERC20 public assetToken;
     MockERC20 public collateralToken;
     MockPriceFeed public priceFeed;
-    
+
     function setUp() public {
         assetToken = new MockERC20("Asset Token", "ASSET");
         collateralToken = new MockERC20("Collateral Token", "COLL");
@@ -56,13 +56,13 @@ contract SlimLendTest is Test {
     function test_interest_rate_at_kink() public view {
         (uint256 rborrow, uint256 rlend) = c.interestRate(0.95e18);
         assertEq(rborrow, 1585489599);
-        assertEq(rlend,   1506215119);
+        assertEq(rlend, 1506215119);
     }
 
     function test_interest_rate_at_max() public view {
         (uint256 rborrow, uint256 rlend) = c.interestRate(1e18);
         assertEq(rborrow, 15854895991);
-        assertEq(rlend,   15854895991);
+        assertEq(rlend, 15854895991);
         // same because utilization is 100%
     }
 }

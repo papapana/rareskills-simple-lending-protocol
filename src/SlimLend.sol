@@ -37,11 +37,7 @@ contract SlimLend is ERC20("LPSlimShares", "LPS") {
     event DepositCollateral(address indexed user, uint256 amount);
     event Borrow(address indexed user, uint256 amount);
     event Repay(address indexed user, uint256 amount);
-    event Liquidate(
-        address indexed liquidator,
-        address indexed borrower,
-        uint256 amount
-    );
+    event Liquidate(address indexed liquidator, address indexed borrower, uint256 amount);
     event WithdrawCollateral(address indexed user, uint256 amount);
 
     struct BorrowerInfo {
@@ -51,11 +47,7 @@ contract SlimLend is ERC20("LPSlimShares", "LPS") {
 
     mapping(address => BorrowerInfo) public borrowerInfo;
 
-    constructor(
-        IERC20 _assetToken,
-        IERC20 _collateralToken,
-        IPriceFeed _priceFeed
-    ) {
+    constructor(IERC20 _assetToken, IERC20 _collateralToken, IPriceFeed _priceFeed) {
         assetToken = _assetToken;
         collateralToken = _collateralToken;
         priceFeed = _priceFeed;
@@ -79,34 +71,21 @@ contract SlimLend is ERC20("LPSlimShares", "LPS") {
      * @return borrowerRate The interest rate paid by borrowers with 18 decimals
      * @return lenderRate The interest rate earned by lenders with 18 decimals
      */
-    function interestRate(
-        uint256 _utilization
-    ) public pure returns (uint256 borrowerRate, uint256 lenderRate) {
+    function interestRate(uint256 _utilization) public pure returns (uint256 borrowerRate, uint256 lenderRate) {
         /*
         Sketch
         if(_utilization <= OPTIMAL_UTILIZATION) {
-            return 
+            return
         } else {
 
         }*/
         if (_utilization <= OPTIMAL_UTILIZATION) {
             // linear: at the kink point (OPTIMAL)
-            borrowerRate = Math.mulDiv(
-                _utilization,
-                KINK_INTEREST_PER_SECOND,
-                OPTIMAL_UTILIZATION
-            );
+            borrowerRate = Math.mulDiv(_utilization, KINK_INTEREST_PER_SECOND, OPTIMAL_UTILIZATION);
         } else {
             uint256 denom = 1e18 - OPTIMAL_UTILIZATION;
-            uint256 numerator = MAX_INTEREST_PER_SECOND -
-                KINK_INTEREST_PER_SECOND;
-            borrowerRate =
-                Math.mulDiv(
-                    _utilization - OPTIMAL_UTILIZATION,
-                    numerator,
-                    denom
-                ) +
-                KINK_INTEREST_PER_SECOND;
+            uint256 numerator = MAX_INTEREST_PER_SECOND - KINK_INTEREST_PER_SECOND;
+            borrowerRate = Math.mulDiv(_utilization - OPTIMAL_UTILIZATION, numerator, denom) + KINK_INTEREST_PER_SECOND;
         }
         lenderRate = Math.mulDiv(borrowerRate, _utilization, 1e18);
     }
@@ -117,9 +96,7 @@ contract SlimLend is ERC20("LPSlimShares", "LPS") {
             return;
         }
 
-        (uint256 borrowerRate, uint256 lenderRate) = interestRate(
-            utilization()
-        );
+        (uint256 borrowerRate, uint256 lenderRate) = interestRate(utilization());
         if (borrowerRate == 0 && lenderRate == 0) {
             lastUpdateTime = block.timestamp;
             return;
@@ -135,11 +112,7 @@ contract SlimLend is ERC20("LPSlimShares", "LPS") {
         // Borrower side: borrowerSharePrice *= (1 + borrowerRate * dt)
         {
             uint256 borrowerAccum = borrowerRate * timePassed;
-            uint256 borrowerDelta = Math.mulDiv(
-                borrowerSharePrice,
-                borrowerAccum,
-                1e18
-            );
+            uint256 borrowerDelta = Math.mulDiv(borrowerSharePrice, borrowerAccum, 1e18);
             borrowerSharePrice += borrowerDelta;
         }
 
@@ -196,18 +169,12 @@ contract SlimLend is ERC20("LPSlimShares", "LPS") {
      * @param amountShares The amount of LP shares to burn
      * @param minAmountAssetOut The minimum amount of asset token to receive (slippage protection)
      */
-    function lpRedeemShares(
-        uint256 amountShares,
-        uint256 minAmountAssetOut
-    ) public {
+    function lpRedeemShares(uint256 amountShares, uint256 minAmountAssetOut) public {
         _updateSharePrices();
 
         uint256 assetsOut = Math.mulDiv(amountShares, lpSharePrice, 1e18);
         require(assetsOut >= minAmountAssetOut, Slippage());
-        require(
-            totalDepositedTokens - totalBorrowedTokens >= assetsOut,
-            InsufficientLiquidity()
-        );
+        require(totalDepositedTokens - totalBorrowedTokens >= assetsOut, InsufficientLiquidity());
         _burn(msg.sender, amountShares);
         assetToken.safeTransfer(msg.sender, assetsOut);
         totalDepositedTokens -= assetsOut;
@@ -222,14 +189,8 @@ contract SlimLend is ERC20("LPSlimShares", "LPS") {
         collateralToken.safeTransferFrom(msg.sender, address(this), amount);
         BorrowerInfo storage c = borrowerInfo[msg.sender];
         c.collateralTokenAmount += amount;
-        console.log(
-            "borrower shares:",
-            borrowerInfo[msg.sender].borrowerShares
-        );
-        console.log(
-            "borrower collateral:",
-            borrowerInfo[msg.sender].collateralTokenAmount
-        );
+        console.log("borrower shares:", borrowerInfo[msg.sender].borrowerShares);
+        console.log("borrower collateral:", borrowerInfo[msg.sender].collateralTokenAmount);
         emit DepositCollateral(msg.sender, amount);
     }
 
@@ -255,10 +216,7 @@ contract SlimLend is ERC20("LPSlimShares", "LPS") {
         b.collateralTokenAmount -= amount;
         collateralToken.safeTransfer(msg.sender, amount);
 
-        require(
-            collateralization_ratio(msg.sender) >= MIN_COLLATERALIZATION_RATIO,
-            MinCollateralization()
-        );
+        require(collateralization_ratio(msg.sender) >= MIN_COLLATERALIZATION_RATIO, MinCollateralization());
 
         // collateralization_ratio(borrower)
 
@@ -282,18 +240,12 @@ contract SlimLend is ERC20("LPSlimShares", "LPS") {
             return;
         }
 
-        require(
-            amount <= assetToken.balanceOf(address(this)),
-            InsufficientLiquidity()
-        );
+        require(amount <= assetToken.balanceOf(address(this)), InsufficientLiquidity());
         BorrowerInfo storage b = borrowerInfo[msg.sender];
         b.borrowerShares += Math.mulDiv(amount, 1e18, borrowerSharePrice);
         require(b.borrowerShares > 0);
         assetToken.safeTransfer(msg.sender, amount);
-        require(
-            collateralization_ratio(msg.sender) >= MIN_COLLATERALIZATION_RATIO,
-            MinCollateralization()
-        );
+        require(collateralization_ratio(msg.sender) >= MIN_COLLATERALIZATION_RATIO, MinCollateralization());
         console.log("amount:", amount);
         console.log("ratio: ", collateralization_ratio(msg.sender));
         console.log("min: ", MIN_COLLATERALIZATION_RATIO);
@@ -307,13 +259,8 @@ contract SlimLend is ERC20("LPSlimShares", "LPS") {
      * @return The dollar value of the borrower's collateral in asset token with 18 decimals
      */
     function collateralValue(address borrower) public view returns (uint256) {
-        (, int256 collateralPriceInt, , , ) = priceFeed.latestRoundData();
-        return
-            Math.mulDiv(
-                borrowerInfo[borrower].collateralTokenAmount,
-                uint256(collateralPriceInt),
-                1e8
-            );
+        (, int256 collateralPriceInt,,,) = priceFeed.latestRoundData();
+        return Math.mulDiv(borrowerInfo[borrower].collateralTokenAmount, uint256(collateralPriceInt), 1e8);
     }
 
     /*
@@ -322,18 +269,12 @@ contract SlimLend is ERC20("LPSlimShares", "LPS") {
      * @return The collateralization ratio (collateral value / debt value) with 18 decimals
      *         If the borrower has no debt, returns type(uint256).max
      */
-    function collateralization_ratio(
-        address borrower
-    ) public view returns (uint256) {
+    function collateralization_ratio(address borrower) public view returns (uint256) {
         BorrowerInfo memory b = borrowerInfo[borrower];
         if (b.borrowerShares == 0) {
             return type(uint256).max;
         }
-        uint256 sharesValue = Math.mulDiv(
-            b.borrowerShares,
-            borrowerSharePrice,
-            1e18
-        );
+        uint256 sharesValue = Math.mulDiv(b.borrowerShares, borrowerSharePrice, 1e18);
 
         console.log("collateral: ", b.collateralTokenAmount);
         console.log("collateral value:", collateralValue(borrower));
@@ -358,11 +299,7 @@ contract SlimLend is ERC20("LPSlimShares", "LPS") {
         //     uint256(price),
         //     1e8
         // );
-        uint256 sharesToBurn = Math.mulDiv(
-            amountAsset,
-            1e18,
-            borrowerSharePrice
-        );
+        uint256 sharesToBurn = Math.mulDiv(amountAsset, 1e18, borrowerSharePrice);
         // console.log("price:", price);
         console.log("amountAsset:", amountAsset);
         // console.log("amountAssetValue:", amountAssetValue);
@@ -380,10 +317,7 @@ contract SlimLend is ERC20("LPSlimShares", "LPS") {
     }
 
     // if x < y return 0, else x - y
-    function _subFloorZero(
-        uint256 x,
-        uint256 y
-    ) internal pure returns (uint256) {
+    function _subFloorZero(uint256 x, uint256 y) internal pure returns (uint256) {
         return x < y ? 0 : x - y;
     }
 
@@ -409,22 +343,11 @@ contract SlimLend is ERC20("LPSlimShares", "LPS") {
         _updateSharePrices(); // TODO: Wasn't checked in the tests (add a counter-test)
         if (canLiquidate(borrower)) {
             BorrowerInfo storage b = borrowerInfo[borrower];
-            uint256 amountNeeded = Math.mulDiv(
-                b.borrowerShares,
-                borrowerSharePrice,
-                1e18
-            );
-            assetToken.safeTransferFrom(
-                msg.sender,
-                address(this),
-                amountNeeded
-            );
+            uint256 amountNeeded = Math.mulDiv(b.borrowerShares, borrowerSharePrice, 1e18);
+            assetToken.safeTransferFrom(msg.sender, address(this), amountNeeded);
             uint256 collateralAmount = b.collateralTokenAmount;
             collateralToken.safeTransfer(msg.sender, collateralAmount);
-            totalBorrowedTokens = _subFloorZero(
-                totalBorrowedTokens,
-                amountNeeded
-            );
+            totalBorrowedTokens = _subFloorZero(totalBorrowedTokens, amountNeeded);
             b.borrowerShares = 0;
             b.collateralTokenAmount = 0;
 
